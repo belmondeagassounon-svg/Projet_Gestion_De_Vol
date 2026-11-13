@@ -1,0 +1,150 @@
+@startuml AgenceVoyage
+title Diagramme de classes - Gestion des vols et reservations d'une agence de voyage
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #1F3A5F
+  ArrowColor #1F3A5F
+}
+hide enum methods
+
+' ======================= ENUMERATIONS =======================
+enum StatutReservation {
+  EN_ATTENTE
+  VALIDEE
+  PAYEE
+  ANNULEE
+}
+
+enum ModePaiement {
+  ESPECES
+  CARTE
+  MOBILE_MONEY
+}
+
+enum StatutPaiement {
+  PAYE
+  REMBOURSE
+}
+
+' ======================= CLASSES =======================
+class Passager {
+  - id : int
+  - nom : string
+  - prenom : string
+  - telephone : string
+  - email : string
+  --
+  + Passager(id, nom, prenom, telephone, email)
+  + getId() : int
+  + getNom() : string
+  + getPrenom() : string
+  + getTelephone() : string
+  + getEmail() : string
+  + getNomComplet() : string
+  + afficher() : void
+}
+
+class Vol {
+  - numero : string
+  - villeDepart : string
+  - villeArrivee : string
+  - dateDepart : string
+  - heureDepart : string
+  - capacite : int
+  - placesReservees : int
+  - prix : double
+  --
+  + Vol(numero, villeDepart, villeArrivee, dateDepart, heureDepart, capacite, prix)
+  + getNumero() : string
+  + getCapacite() : int
+  + getPrix() : double
+  + getPlacesDisponibles() : int
+  + estComplet() : bool
+  + reserverPlace() : void
+  + libererPlace() : void
+  + afficherLigne() : void
+}
+
+class Reservation {
+  - id : int
+  - statut : StatutReservation
+  --
+  + Reservation(id, passager, vol)
+  + getId() : int
+  + getStatut() : StatutReservation
+  + getPassager() : Passager*
+  + getVol() : Vol*
+  + getPaiement() : Paiement*
+  + occupeUnePlace() : bool
+  + valider() : void
+  + verifierPayable() : void
+  + associerPaiement(p : Paiement*) : void
+  + annuler() : double
+  + afficherDetails() : void
+}
+
+class Paiement {
+  - id : int
+  - montant : double
+  - mode : ModePaiement
+  - statut : StatutPaiement
+  - montantRembourse : double
+  {static} TAUX_REMBOURSEMENT : double = 0.80
+  --
+  + Paiement(id, reservation, montant, mode)
+  + getId() : int
+  + getMontant() : double
+  + getStatut() : StatutPaiement
+  + rembourser() : double
+  + afficher() : void
+}
+
+class Agence {
+  - nom : string
+  - prochainIdPassager : int
+  - prochainIdReservation : int
+  - prochainIdPaiement : int
+  --
+  + enregistrerPassager(nom, prenom, tel, email) : Passager&
+  + ajouterVol(numero, depart, arrivee, date, heure, capacite, prix) : Vol&
+  + afficherVolsDisponibles() : void
+  + rechercherVols(depart, arrivee) : int
+  + effectuerReservation(idPassager, numeroVol) : Reservation&
+  + validerReservation(idReservation) : void
+  + enregistrerPaiement(idReservation, mode) : Paiement&
+  + annulerReservation(idReservation) : double
+  + afficherReservations() : void
+  + afficherInfosReservation(idReservation) : void
+}
+
+' ======================= ASSOCIATIONS =======================
+' Composition : l'agence possede et gere la duree de vie des objets
+Agence *-- "0..*" Passager    : enregistre >
+Agence *-- "0..*" Vol         : propose >
+Agence *-- "0..*" Reservation : gere >
+Agence *-- "0..*" Paiement    : encaisse >
+
+' Associations metier (multiplicites issues des regles de gestion)
+Passager    "1"    -- "0..*" Reservation : effectue >
+Vol         "1"    -- "0..*" Reservation : est reserve par >
+Reservation "1"    -- "0..1" Paiement    : est reglee par >
+
+' Utilisation des enumerations
+Reservation ..> StatutReservation
+Paiement    ..> ModePaiement
+Paiement    ..> StatutPaiement
+
+note bottom of Reservation
+  Regles de gestion :
+  R1 passager enregistre avant reservation
+  R2 reservations validees <= capacite du vol
+  R3 pas 2 reservations actives du meme passager sur un vol
+  R4 1 reservation = 1 passager + 1 vol
+  R5 reservation annulee => paiement impossible
+  R6 place reservee seulement apres validation
+  R7 annulation/paiement selon le statut de remboursement
+end note
+@enduml
